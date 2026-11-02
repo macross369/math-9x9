@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>九九乘法節奏大師 | 班級大屏帶念互動系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F5F7FF',
+              100: '#EBF0FE',
+              200: '#CEDCFD',
+              400: '#7FA6FA',
+              500: '#4D82F7',
+              600: '#2563EB',
+              700: '#1D4ED8',
+            },
+            pastelYellow: '#FEF3C7',
+            pastelMint: '#D1FAE5',
+            pastelPink: '#FCE7F3',
+            pastelPeach: '#FFEDD5',
+            pastelSky: '#E0F2FE',
+          },
+          fontFamily: {
+            sans: ['"Inter"', 'system-ui', '-apple-system', '"PingFang TC"', '"Microsoft JhengHei"', 'sans-serif'],
+            math: ['"Comic Sans MS"', '"Chalkboard SE"', '"PingFang TC"', 'sans-serif'],
+          },
+          boxShadow: {
+            'board': '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+            'board-lg': '0 20px 35px -10px rgba(0, 0, 0, 0.12), 0 10px 15px -5px rgba(0, 0, 0, 0.08)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 課堂大屏專用字體與平滑動畫 */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;800;900&display=swap');
+    
+    .math-font {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+
+    /* 防止電子白板長按選取干擾操作 */
+    .no-select {
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    /* 卡片翻轉與節奏跳動特效 */
+    @keyframes pulseScale {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+    }
+    .rhythm-beat {
+      animation: pulseScale 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 自訂滑桿外觀 */
+    input[type=range] {
+      accent-color: #2563EB;
+    }
+
+    /* 偽全螢幕備援樣式 (當瀏覽器安全性限制無法進入原生全螢幕時使用) */
+    body.pseudo-fullscreen {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 99999 !important;
+      overflow-y: auto !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased min-h-screen flex flex-col no-select overflow-x-hidden">
+
+  <!-- ==================== 頂部主導航列 ==================== -->
+  <header class="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-4 py-3 sm:px-6 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Logo 與標題 -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
+            九九乘法節奏大師
+            <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">大屏專用版</span>
+          </h1>
+          <p class="text-xs text-slate-500 hidden sm:block">智慧電子白板與全班帶念輔助教學系統</p>
+        </div>
+      </div>
+
+      <!-- 模式切換按鈕組 -->
+      <div class="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
+        <button id="navPracticeBtn" onclick="switchMainMode('practice')" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-bold transition-all shadow-sm bg-white text-brand-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          練習模式
+        </button>
+        <button id="navChallengeBtn" onclick="switchMainMode('challenge')" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-bold transition-all text-slate-600 hover:text-slate-900">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          挑戰模式 (快問快答)
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== 主內容容器 ==================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 flex flex-col gap-4">
+
+    <!-- 1. 練習模式 (Practice View) -->
+    <div id="practiceView" class="flex flex-col gap-4 flex-1">
+      
+      <!-- 控制列與設定面板 -->
+      <div class="bg-white rounded-3xl p-4 sm:p-5 shadow-board border border-slate-200 flex flex-col gap-3.5">
+        
+        <!-- 第一列：答案顯示、被乘數順序、乘數順序 (三等分對稱排列) -->
+        <div class="flex flex-wrap items-center justify-between gap-3.5">
+          
+          <!-- 答案顯示開關 -->
+          <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-500 px-2">答案顯示：</span>
+            <button id="ansHideBtn" onclick="setAnswerMode('hide')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all bg-white text-brand-600 shadow-sm">
+              不顯示 (2 × 1)
+            </button>
+            <button id="ansShowBtn" onclick="setAnswerMode('show')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all text-slate-600 hover:text-slate-900">
+              顯示 (2 × 1 = 2)
+            </button>
+          </div>
+
+          <!-- 被乘數順序 -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200">被乘數順序</span>
+            <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200">
+              <button id="overallAscBtn" onclick="setOverallOrder('asc')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-sm">
+                順序 (2➔9)
+              </button>
+              <button id="overallDescBtn" onclick="setOverallOrder('desc')" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">
+                倒序 (9➔2)
+              </button>
+              <button id="overallRandBtn" onclick="setOverallOrder('random')" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center gap-1">
+                <span>隨機</span>
+                <span id="randSeedBadge" class="hidden text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded">洗牌中</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 乘數順序 -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-xl border border-slate-200">乘數順序</span>
+            <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200">
+              <button id="inOrderAscBtn" onclick="setInGroupOrder('asc')" class="px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-sm">
+                順序 (1➔9)
+              </button>
+              <button id="inOrderDescBtn" onclick="setInGroupOrder('desc')" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">
+                倒序 (9➔1)
+              </button>
+              <button id="inOrderRandBtn" onclick="setInGroupOrder('random')" class="px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900">
+                隨機
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 第二列：朗讀語氣(左)、九宮格讀音(中)、自動播放/帶念/秒數(右) -->
+        <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3.5">
+          
+          <!-- 口訣發音模式切換 與 朗讀開關 (左) -->
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold text-slate-500">朗讀語氣：</label>
+            <select id="voiceStyleSelect" onchange="changeVoiceStyle(this.value)" class="text-xs font-bold bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-700 outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="traditional">口訣節奏 (二一得二)</option>
+              <option value="standard">標準算式 (2乘1等於2)</option>
+            </select>
+            <button id="toggleVoiceBtn" onclick="toggleSpeech()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center gap-1.5 transition border border-slate-200" title="點擊切換語音朗讀開關">
+              <span id="voiceIcon">🔊</span>
+              <span id="voiceLabel">朗讀：開</span>
+            </button>
+          </div>
+
+          <!-- 九宮格讀音顯示切換 (中 - 由原第三列向上移至此) -->
+          <div id="gridChantToggleWrapper" class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-500 px-2">九宮格讀音：</span>
+            <button id="gridChantShowBtn" onclick="setGridChantMode(true)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white text-brand-600 shadow-sm">
+              顯示 (二一得二)
+            </button>
+            <button id="gridChantHideBtn" onclick="setGridChantMode(false)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+              不顯示
+            </button>
+          </div>
+
+          <!-- 自動播放與自動帶念控制區 (右 - 由原第三列向上移至此) -->
+          <div class="flex items-center gap-2 bg-indigo-50/70 border border-indigo-100 px-3 py-1.5 rounded-2xl flex-wrap">
+            <!-- 自動播放按鈕 (無語音自動翻頁) -->
+            <button id="autoBrowseToggleBtn" onclick="toggleAutoBrowse()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-700 hover:bg-slate-800 text-white shadow-sm transition">
+              <span id="autoBrowseIcon">▶</span>
+              <span id="autoBrowseText">自動播放</span>
+            </button>
+            
+            <!-- 自動帶念按鈕 (含語音念誦) -->
+            <button id="autoPlayToggleBtn" onclick="toggleAutoPacing()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+              <span id="autoPlayIcon">▶</span>
+              <span id="autoPlayText">自動帶念</span>
+            </button>
+
+            <!-- 秒數設定輸入框 -->
+            <div class="flex items-center gap-1 bg-white border-2 border-blue-500 rounded-xl px-2.5 py-0.5 shadow-sm">
+              <input type="number" id="practiceSecInput" min="0.5" max="10" step="0.5" value="1.0" onchange="updatePracticeInterval(this.value)" class="w-10 text-center text-xs font-bold outline-none text-slate-800 bg-transparent">
+              <span class="text-xs font-bold text-slate-600">秒</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 第三列：版面樣式 (左) + 切換被乘數 (置中) + 快捷鍵說明 (右) -->
+        <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3.5">
+          
+          <!-- 左側：版面呈現 (單一放大 vs 九宮格全組) -->
+          <div class="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+            <span class="text-xs font-bold text-slate-500 px-2">版面樣式：</span>
+            <button id="layoutSingleBtn" onclick="setLayoutMode('single')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all bg-brand-600 text-white shadow-sm flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
+              單一放大
+            </button>
+            <button id="layoutGridBtn" onclick="setLayoutMode('grid')" class="px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+              九宮格全組
+            </button>
+          </div>
+
+          <!-- 中央：切換被乘數 (獨立置中排列) -->
+          <div class="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-2xl border border-slate-200 shadow-sm mx-auto sm:mx-0">
+            <span class="text-xs font-black text-slate-600">切換被乘數：</span>
+            <div id="quickJumpContainer" class="flex gap-1.5 flex-wrap">
+              <!-- 由 JS 動態繪製 2~9 標籤 -->
+            </div>
+          </div>
+
+          <!-- 右側：鍵盤支援提示 -->
+          <div class="text-xs font-bold text-slate-400 flex items-center gap-2">
+            <span>鍵盤支援：[空白鍵] 顯示/下一題 · [←/→] 切換</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- 練習核心視窗：依 layoutMode 切換 單一放大 / 九宮格 -->
+      <div class="flex-1 flex flex-col justify-center min-h-[440px]">
+        
+        <!-- A. 單一放大顯示畫面 (Single Equation Card) -->
+        <div id="singleCardWrapper" class="flex-1 flex flex-col items-center justify-center p-4">
+          <div class="relative w-full max-w-4xl bg-white rounded-3xl p-8 sm:p-14 shadow-board-lg border-2 border-slate-200/80 flex flex-col items-center justify-center transition-all duration-300">
+            
+            <!-- 當前段數標籤與提示 -->
+            <div class="absolute top-6 left-6 flex items-center gap-2">
+              <span id="singleGroupBadge" class="bg-gradient-to-r from-brand-500 to-indigo-600 text-white text-xs sm:text-sm font-extrabold px-3.5 py-1.5 rounded-full shadow-sm">
+                第 2 關 (2的乘法)
+              </span>
+              <span id="singleOrderBadge" class="text-xs text-slate-400 font-bold hidden sm:inline">
+                進度: <span id="singleStepIndex">1</span>/9
+              </span>
+            </div>
+
+            <!-- 點擊發音快速小按鈕 -->
+            <div class="absolute top-6 right-6">
+              <button onclick="speakCurrentEquation()" class="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 transition" title="重新朗讀當前算式">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+              </button>
+            </div>
+
+            <!-- 大屏置中超大算式核心 -->
+            <div id="equationDisplayBox" onclick="toggleCardAnswerReveal()" class="cursor-pointer py-10 sm:py-16 px-4 w-full flex items-center justify-center text-center select-none group" title="點擊切換顯示/隱藏答案">
+              <div class="flex items-center justify-center flex-wrap gap-3 sm:gap-6 font-extrabold text-slate-800 math-font tracking-tight">
+                <span id="eqA" class="text-6xl sm:text-8xl md:text-9xl text-indigo-700">2</span>
+                <span class="text-4xl sm:text-7xl md:text-8xl text-slate-400 font-light">×</span>
+                <span id="eqB" class="text-6xl sm:text-8xl md:text-9xl text-brand-600">1</span>
+                
+                <!-- 等號與答案區塊 (未顯示答案時完全 display:none 以保證題目絕對置中) -->
+                <div id="eqAnsContainer" class="hidden items-center gap-3 sm:gap-6 transition-all duration-200">
+                  <span class="text-4xl sm:text-7xl md:text-8xl text-slate-400 font-light">=</span>
+                  <span id="eqAns" class="text-6xl sm:text-8xl md:text-9xl text-emerald-600 bg-emerald-50 px-5 sm:px-8 py-1 rounded-3xl border-2 border-emerald-200 shadow-inner">2</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 底部操作列：上一題、點擊看答案、下一題 -->
+            <div class="w-full flex items-center justify-between pt-6 border-t border-slate-100 gap-3">
+              <button onclick="navigateStep(-1)" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-base transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                <span class="hidden sm:inline">上一式</span>
+              </button>
+
+              <button id="tapRevealHintBtn" onclick="toggleCardAnswerReveal()" class="flex-1 max-w-xs py-3.5 px-4 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 font-extrabold text-sm sm:text-base text-center transition shadow-sm">
+                💡 點擊切換/看答案
+              </button>
+
+              <button onclick="navigateStep(1)" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-base shadow-md shadow-brand-500/20 transition">
+                <span class="hidden sm:inline">下一式</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- B. 九宮格全組顯示畫面 (3x3 Grid View) -->
+        <div id="gridCardWrapper" class="hidden flex-1 flex flex-col p-2">
+          
+          <!-- 當前組別導覽與上下組切換 -->
+          <div class="flex items-center justify-between mb-3 px-2">
+            <div class="flex items-center gap-3">
+              <h2 id="gridTitle" class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                <span class="w-4 h-8 bg-brand-600 rounded-lg inline-block"></span>
+                「2」的乘法完整表
+              </h2>
+              <span class="text-xs sm:text-sm bg-slate-200 text-slate-700 font-bold px-3 py-1 rounded-xl">一組 9 式</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="navigateGroup(-1)" class="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 font-bold text-slate-700 text-sm shadow-sm transition">
+                ◀ 上一組段落
+              </button>
+              <button onclick="navigateGroup(1)" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 font-bold text-white text-sm shadow-sm transition">
+                下一組段落 ▶
+              </button>
+            </div>
+          </div>
+
+          <!-- 3x3 九宮格容器 -->
+          <div id="gridNineCells" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 flex-1">
+            <!-- 由 JS 依序由左至右、由上至下渲染 9 格 -->
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 2. 挑戰模式 (Challenge Mode View) -->
+    <div id="challengeView" class="hidden flex-1 flex flex-col gap-4">
+      
+      <!-- 挑戰設定列 (題目數量、自動播放時間、朗讀開關、開始挑戰) -->
+      <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-board border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+        
+        <!-- 題數選擇器 -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-extrabold text-slate-700">挑戰題數：</span>
+          <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200">
+            <button onclick="setChallengeTotal(10)" class="chal-count-btn px-3 py-1 text-xs font-extrabold rounded-lg text-slate-600 hover:text-slate-900">10題</button>
+            <button onclick="setChallengeTotal(20)" class="chal-count-btn px-3 py-1 text-xs font-extrabold rounded-lg bg-white text-brand-600 shadow-sm">20題</button>
+            <button onclick="setChallengeTotal(36)" class="chal-count-btn px-3 py-1 text-xs font-extrabold rounded-lg text-slate-600 hover:text-slate-900">36題</button>
+            <button onclick="setChallengeTotal(72)" class="chal-count-btn px-3 py-1 text-xs font-extrabold rounded-lg text-slate-600 hover:text-slate-900">72題(滿貫)</button>
+          </div>
+          <div class="flex items-center gap-1.5 ml-1">
+            <input type="number" id="customCountInput" min="1" max="72" value="20" onchange="setChallengeCustom(this.value)" class="w-16 px-2 py-1 text-xs font-bold border border-slate-300 rounded-lg text-center outline-none focus:ring-2 focus:ring-brand-500">
+            <span class="text-xs text-slate-500">題 (上限72)</span>
+          </div>
+        </div>
+
+        <!-- 原計時位置替換：設定自動播放時間 + 朗讀開關 + 開始挑戰按鈕 -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="flex items-center gap-2 bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 rounded-2xl">
+            <span class="text-xs font-bold text-indigo-900">自動播放：</span>
+            <input type="number" id="chalAutoSecInput" min="0.5" max="10" step="0.5" value="1.0" class="w-16 px-2 py-1 text-xs font-black bg-white border border-indigo-200 rounded-lg text-center outline-none focus:ring-2 focus:ring-brand-500 text-indigo-700">
+            <span class="text-xs font-bold text-indigo-900">秒</span>
+          </div>
+
+          <!-- 挑戰模式朗讀開關按鈕 -->
+          <button id="toggleChalVoiceBtn" onclick="toggleSpeech()" class="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition border border-slate-200 shadow-sm" title="點擊切換語音朗讀開關">
+            <span id="chalVoiceIcon">🔊</span>
+            <span id="chalVoiceLabel">朗讀：開</span>
+          </button>
+
+          <button onclick="startChallengeModal()" class="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm sm:text-base shadow-md shadow-brand-500/20 transition transform active:scale-95">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            開始挑戰
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 說明指引與準備資訊 (已修正多餘的未閉合標籤) -->
+      <div class="bg-white rounded-3xl p-8 sm:p-12 shadow-board border border-slate-200 flex flex-col items-center justify-center text-center my-auto min-h-[360px] w-full">
+        <div class="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center text-4xl mb-4 text-brand-600 shadow-inner">
+          ⚡
+        </div>
+        <h3 class="text-2xl font-black text-slate-800 mb-2">準備好進行九九乘法快問快答了嗎？</h3>
+        <p class="text-slate-500 text-sm max-w-md leading-relaxed">
+          請於上方設定挑戰題數與自動播放秒數，點選「開始挑戰」即可開啟全螢幕大屏題卡視窗。
+        </p>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== 全螢幕挑戰視窗 (Modal Overlay) ==================== -->
+  <div id="challengeModal" style="display: none;" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md hidden flex-col items-center justify-center p-3 sm:p-8">
+    
+    <!-- 視窗主體卡片 -->
+    <div id="challengeQuestionCard" class="w-full max-w-5xl bg-white rounded-3xl p-6 sm:p-12 shadow-2xl border-2 border-indigo-100 flex flex-col items-center justify-between relative min-h-[540px]">
+      
+      <!-- 頂部進度條與資訊 -->
+      <div class="w-full">
+        <div class="w-full bg-slate-100 h-3 rounded-full mb-6 overflow-hidden">
+          <div id="challengeProgressBar" class="h-full bg-gradient-to-r from-brand-500 to-emerald-400 transition-all duration-300" style="width: 5%;"></div>
+        </div>
+
+        <div class="flex items-center justify-between w-full">
+          <div class="flex items-center gap-3">
+            <span class="bg-indigo-50 border border-indigo-200 text-indigo-700 font-black text-sm sm:text-base px-4 py-1.5 rounded-full">
+              第 <span id="chalCurIndex">1</span> / <span id="chalTotalIndex">20</span> 題
+            </span>
+            <span id="chalAutoStatusTag" class="text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              自動播放中 (<span id="chalAutoCurrentSecText">1.0</span>s)
+            </span>
+          </div>
+          <span class="text-xs font-bold text-slate-400 hidden sm:inline">
+            隨機抽取 2×1 ～ 9×9
+          </span>
+        </div>
+      </div>
+
+      <!-- 中央題目展示區：未顯示答案時題目居中；顯示答案時如圖3 -->
+      <div onclick="toggleChallengeAnswer()" class="cursor-pointer py-12 sm:py-20 w-full flex items-center justify-center select-none" title="點擊顯示答案或按空白鍵">
+        <div class="flex items-center justify-center flex-wrap gap-4 sm:gap-8 font-extrabold text-slate-800 math-font tracking-tight">
+          <span id="chalA" class="text-7xl sm:text-9xl text-indigo-700">7</span>
+          <span class="text-5xl sm:text-8xl text-slate-400 font-light">×</span>
+          <span id="chalB" class="text-7xl sm:text-9xl text-brand-600">8</span>
+          
+          <!-- 答案區塊：未顯示答案時 hidden，保證題目置中 -->
+          <div id="chalAnsWrap" class="hidden items-center gap-4 sm:gap-8 transition-all">
+            <span class="text-5xl sm:text-8xl text-slate-400 font-light">=</span>
+            <span id="chalAns" class="text-7xl sm:text-9xl text-emerald-600 bg-emerald-50 px-6 sm:px-10 py-1 rounded-3xl border-2 border-emerald-200 shadow-inner">56</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部按鈕列：顯示答案 | 暫停/繼續 | 取消挑戰 -->
+      <div class="w-full flex items-center justify-between pt-6 border-t border-slate-100 gap-3 sm:gap-4 flex-wrap">
+        
+        <!-- 顯示答案 -->
+        <button onclick="toggleChallengeAnswer()" class="flex-1 py-4 px-4 sm:px-6 rounded-2xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-black text-sm sm:text-base transition flex items-center justify-center gap-2 shadow-sm">
+          <span id="chalRevealBtnText">👁️ 顯示答案 (空白鍵)</span>
+        </button>
+
+        <!-- 暫停 / 繼續 按鈕 -->
+        <button id="chalPauseBtn" onclick="toggleChallengePause()" class="flex-1 py-4 px-4 sm:px-6 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-sm sm:text-base transition flex items-center justify-center gap-2 border border-slate-200 shadow-sm">
+          <span id="chalPauseIcon">⏸️</span>
+          <span id="chalPauseText">暫停</span>
+        </button>
+
+        <!-- 取消挑戰 按鈕 (取代下一題) -->
+        <button onclick="closeChallengeModal()" class="flex-1 py-4 px-4 sm:px-6 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-sm sm:text-base shadow-md shadow-rose-500/20 transition flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          <span>取消挑戰</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 挑戰完成恭喜畫面 (覆蓋於 Modal 內) -->
+    <div id="challengeCompleteArea" class="hidden w-full max-w-2xl bg-white rounded-3xl p-8 sm:p-12 shadow-2xl border-2 border-emerald-200 text-center flex flex-col items-center">
+      <div class="w-24 h-24 bg-emerald-100 rounded-3xl flex items-center justify-center text-5xl mb-4 animate-bounce">
+        🏆
+      </div>
+      <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mb-2">太棒了！全數挑戰成功！</h2>
+      <p class="text-slate-600 font-medium mb-6">
+        已順利完成隨機 <span id="summaryTotalCount" class="font-bold text-brand-600">20</span> 題九九乘法挑戰！
+      </p>
+
+      <div class="flex gap-4 w-full">
+        <button onclick="startChallengeModal()" class="flex-1 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-lg shadow-md shadow-brand-500/20 transition">
+          再來一輪挑戰
+        </button>
+        <button onclick="closeChallengeModal()" class="py-4 px-6 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-lg transition">
+          關閉返回
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 頁尾資訊 -->
+  <footer class="bg-white border-t border-slate-200 py-3 px-4 text-center text-xs text-slate-400 font-medium">
+    九九乘法帶念節奏大師 · 專為國小課堂大屏/觸控白板設計 · 支援標準國語語音帶念與全鍵盤快捷鍵
+  </footer>
+
+  <!-- 煙火畫布 (慶祝動畫，加上 pointer-events-none 與初始完全隱藏) -->
+  <canvas id="confettiCanvas" class="pointer-events-none fixed inset-0 z-50 w-full h-full hidden" style="display: none;"></canvas>
+
+  <!-- ==================== 核心邏輯 JavaScript ==================== -->
+  <script>
+    /* ==========================================================================
+       狀態機與設定管理 (State Management)
+       ========================================================================== */
+    const state = {
+      mainMode: 'practice',          // 'practice' | 'challenge'
+      
+      // 練習模式設定
+      answerMode: 'hide',            // 'show' | 'hide'
+      showGridChant: true,           // 九宮格是否顯示讀音
+      layoutMode: 'single',          // 'single' (單一放大) | 'grid' (九宮格)
+      inGroupOrder: 'asc',           // 'asc' (1~9) | 'desc' (9~1) | 'random' (隨機)
+      multiplierSeq: [1, 2, 3, 4, 5, 6, 7, 8, 9], // 當前組內乘數序列
+      overallOrder: 'asc',           // 'asc' (2~9) | 'desc' (9~2) | 'random' (隨機)
+      
+      currentGroupIndex: 0,          // 當前被乘數群組索引 (對應 multiplicandSeq)
+      multiplicandSeq: [2, 3, 4, 5, 6, 7, 8, 9], // 被乘數排列陣列
+      stepIndex: 0,                  // 單式時在該組內的索引 0~8
+      
+      // 語音與帶念/播放節奏
+      speechEnabled: true,
+      voiceStyle: 'traditional',     // 'traditional' (二一得二) | 'standard' (2乘1等於2)
+      
+      // 自動播放 (純切換，不帶念)
+      isAutoBrowsing: false,
+      autoBrowseTimerId: null,
+
+      // 自動帶念 (自動切換且念誦)
+      isAutoPacing: false,
+      pacingTimerId: null,
+      
+      practiceIntervalMs: 1000,      // 預設 1 秒
+
+      // 挑戰模式狀態 (全螢幕 + 自動播放)
+      challengeTotal: 20,
+      challengeDeck: [],
+      challengeIndex: 0,
+      challengeShowAns: false,
+      challengeAutoSec: 1.0,
+      challengeAutoTimerId: null,
+      challengeIsPaused: false,
+      isChallengeModalOpen: false,
+    };
+
+    // 中文口訣字典 (傳統課堂誦讀口訣)
+    const DIGIT_CHINESE = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    
+    function getTraditionalChant(a, b) {
+      const prod = a * b;
+      const chA = DIGIT_CHINESE[a];
+      const chB = DIGIT_CHINESE[b];
+      
+      if (prod < 10) {
+        return `${chA}${chB}得${DIGIT_CHINESE[prod]}`;
+      } else if (prod === 10) {
+        return `${chA}${chB}一十`;
+      } else {
+        const tens = Math.floor(prod / 10);
+        const units = prod % 10;
+        const tensStr = tens === 1 ? '十' : `${DIGIT_CHINESE[tens]}十`;
+        const unitsStr = units === 0 ? '' : DIGIT_CHINESE[units];
+        return `${chA}${chB}${tensStr}${unitsStr}`;
+      }
+    }
+
+    /* ==========================================================================
+       語音發音模組 (Web Speech API)
+       ========================================================================== */
+    function speakText(text) {
+      if (!state.speechEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+
+      window.speechSynthesis.cancel(); // 停止先前的聲音，保持跟上節奏
+      
+      // 解決瀏覽器語音合成將多音字「乘」誤讀為四聲「ㄕㄥˋ」(shèng) 的問題
+      // 將送入語音引擎的文字轉為同音字「成」(ㄔㄥˊ)，確保在各大瀏覽器皆精確念為二聲 ㄔㄥˊ
+      const phoneticText = text.replace(/乘/g, '成');
+
+      const utterance = new SpeechSynthesisUtterance(phoneticText);
+      utterance.lang = 'zh-TW';
+      utterance.rate = 1.05; // 稍微提速以維持節奏朗誦俐落度
+      utterance.pitch = 1.1; // 兒童教學明亮語調
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function speakCurrentEquation() {
+      const currentMultiplicand = state.multiplicandSeq[state.currentGroupIndex];
+      const multiplier = getMultiplierAt(state.stepIndex);
+      const answer = currentMultiplicand * multiplier;
+      
+      let chant = '';
+      if (state.voiceStyle === 'traditional') {
+        chant = getTraditionalChant(currentMultiplicand, multiplier);
+      } else {
+        chant = `${currentMultiplicand} 乘 ${multiplier} 等於 ${answer}`;
+      }
+      speakText(chant);
+    }
+
+    function toggleSpeech() {
+      state.speechEnabled = !state.speechEnabled;
+      const icon = document.getElementById('voiceIcon');
+      const label = document.getElementById('voiceLabel');
+      const chalIcon = document.getElementById('chalVoiceIcon');
+      const chalLabel = document.getElementById('chalVoiceLabel');
+
+      if (state.speechEnabled) {
+        if (icon) icon.textContent = '🔊';
+        if (label) label.textContent = '朗讀：開';
+        if (chalIcon) chalIcon.textContent = '🔊';
+        if (chalLabel) chalLabel.textContent = '朗讀：開';
+        speakText('語音開啟');
+      } else {
+        window.speechSynthesis.cancel();
+        if (icon) icon.textContent = '🔇';
+        if (label) label.textContent = '朗讀：關';
+        if (chalIcon) chalIcon.textContent = '🔇';
+        if (chalLabel) chalLabel.textContent = '朗讀：關';
+      }
+    }
+
+    function changeVoiceStyle(val) {
+      state.voiceStyle = val;
+      if (state.mainMode === 'practice' && state.layoutMode === 'single') {
+        speakCurrentEquation();
+      }
+    }
+
+    /* ==========================================================================
+       練習模式邏輯 (Practice Engine)
+       ========================================================================== */
+    function regenerateMultiplierSeq() {
+      if (state.inGroupOrder === 'asc') {
+        state.multiplierSeq = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      } else if (state.inGroupOrder === 'desc') {
+        state.multiplierSeq = [9, 8, 7, 6, 5, 4, 3, 2, 1];
+      } else if (state.inGroupOrder === 'random') {
+        const pool = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        state.multiplierSeq = pool;
+      }
+    }
+
+    function getMultiplierAt(index) {
+      if (!state.multiplierSeq || state.multiplierSeq.length !== 9) {
+        regenerateMultiplierSeq();
+      }
+      return state.multiplierSeq[index];
+    }
+
+    // 重設或打亂整體被乘數陣列
+    function regenerateOverallSeq() {
+      if (state.overallOrder === 'asc') {
+        state.multiplicandSeq = [2, 3, 4, 5, 6, 7, 8, 9];
+      } else if (state.overallOrder === 'desc') {
+        state.multiplicandSeq = [9, 8, 7, 6, 5, 4, 3, 2];
+      } else if (state.overallOrder === 'random') {
+        const pool = [2, 3, 4, 5, 6, 7, 8, 9];
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        state.multiplicandSeq = pool;
+      }
+      state.currentGroupIndex = 0;
+      state.stepIndex = 0;
+      if (state.inGroupOrder === 'random') regenerateMultiplierSeq();
+      renderQuickJumpBar();
+      updatePracticeDisplay();
+    }
+
+    // 建立/更新快速跳轉標籤 (2~9)
+    function renderQuickJumpBar() {
+      const container = document.getElementById('quickJumpContainer');
+      container.innerHTML = '';
+      
+      state.multiplicandSeq.forEach((num, idx) => {
+        const btn = document.createElement('button');
+        const isActive = idx === state.currentGroupIndex;
+        btn.textContent = num;
+        btn.className = `w-8 h-8 rounded-xl font-black text-sm transition-all ${
+          isActive 
+            ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-300' 
+            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+        }`;
+        btn.onclick = () => {
+          state.currentGroupIndex = idx;
+          state.stepIndex = 0;
+          if (state.inGroupOrder === 'random') regenerateMultiplierSeq();
+          renderQuickJumpBar();
+          updatePracticeDisplay();
+          if (state.layoutMode === 'single') speakCurrentEquation();
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    // 更新練習模式畫面 (單一 or 九宮格)
+    function updatePracticeDisplay() {
+      const currentMultiplicand = state.multiplicandSeq[state.currentGroupIndex];
+      renderQuickJumpBar();
+
+      if (state.layoutMode === 'single') {
+        // 單一卡片更新
+        document.getElementById('singleCardWrapper').classList.remove('hidden');
+        document.getElementById('gridCardWrapper').classList.add('hidden');
+
+        const multiplier = getMultiplierAt(state.stepIndex);
+        const answer = currentMultiplicand * multiplier;
+
+        document.getElementById('singleGroupBadge').textContent = `第 ${currentMultiplicand} 關 (${currentMultiplicand}的乘法)`;
+        document.getElementById('singleStepIndex').textContent = (state.stepIndex + 1);
+
+        document.getElementById('eqA').textContent = currentMultiplicand;
+        document.getElementById('eqB').textContent = multiplier;
+        document.getElementById('eqAns').textContent = answer;
+
+        const ansContainer = document.getElementById('eqAnsContainer');
+        if (state.answerMode === 'show') {
+          ansContainer.classList.remove('hidden');
+          ansContainer.classList.add('flex');
+        } else {
+          ansContainer.classList.add('hidden');
+          ansContainer.classList.remove('flex');
+        }
+
+        // 添加輕微跳動節奏動畫
+        const eqBox = document.getElementById('equationDisplayBox');
+        eqBox.classList.remove('rhythm-beat');
+        void eqBox.offsetWidth; // trigger reflow
+        eqBox.classList.add('rhythm-beat');
+
+      } else {
+        // 九宮格模式更新
+        document.getElementById('singleCardWrapper').classList.add('hidden');
+        document.getElementById('gridCardWrapper').classList.remove('hidden');
+
+        const orderText = state.inGroupOrder === 'asc' ? '順序 1➔9' : (state.inGroupOrder === 'desc' ? '倒序 9➔1' : '隨機');
+        document.getElementById('gridTitle').innerHTML = `
+          <span class="w-3.5 h-8 bg-brand-600 rounded-lg inline-block"></span>
+          「${currentMultiplicand}」的乘法完整表 (${orderText})
+        `;
+
+        renderNineGrid(currentMultiplicand);
+      }
+    }
+
+    // 渲染九宮格 (3x3 依序由左至右、由上至下)
+    function renderNineGrid(multiplicand) {
+      const grid = document.getElementById('gridNineCells');
+      grid.innerHTML = '';
+
+      // 配色卡片色彩 (九宮格活潑配色)
+      const colors = [
+        'bg-blue-50/70 border-blue-200 text-blue-900',
+        'bg-amber-50/70 border-amber-200 text-amber-900',
+        'bg-emerald-50/70 border-emerald-200 text-emerald-900',
+        'bg-indigo-50/70 border-indigo-200 text-indigo-900',
+        'bg-pink-50/70 border-pink-200 text-pink-900',
+        'bg-purple-50/70 border-purple-200 text-purple-900',
+        'bg-cyan-50/70 border-cyan-200 text-cyan-900',
+        'bg-orange-50/70 border-orange-200 text-orange-900',
+        'bg-teal-50/70 border-teal-200 text-teal-900',
+      ];
+
+      const showAns = (state.answerMode === 'show');
+
+      for (let i = 0; i < 9; i++) {
+        const mult = getMultiplierAt(i);
+        const ans = multiplicand * mult;
+        const colorStyle = colors[i % colors.length];
+
+        const card = document.createElement('div');
+        card.className = `border-2 ${colorStyle} rounded-3xl p-5 sm:p-7 flex flex-col justify-between shadow-sm hover:shadow-md transition-all cursor-pointer select-none min-h-[160px]`;
+        
+        // 點擊單一九宮格念出該口訣或切換該題答案顯示
+        card.onclick = () => {
+          const ansWrap = card.querySelector('.grid-ans-wrap');
+          if (ansWrap) {
+            ansWrap.classList.toggle('hidden');
+            ansWrap.classList.toggle('flex');
+          }
+          if (state.voiceStyle === 'traditional') {
+            speakText(getTraditionalChant(multiplicand, mult));
+          } else {
+            speakText(`${multiplicand} 乘 ${mult} 等於 ${ans}`);
+          }
+        };
+
+        const chantDisplayClass = state.showGridChant ? '' : 'hidden';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-xs font-bold opacity-60">
+            <span>式 ${i + 1}</span>
+            <span>點擊朗讀/翻面</span>
+          </div>
+          <div class="py-3 text-center math-font font-black tracking-tight text-4xl sm:text-5xl flex items-center justify-center gap-2">
+            <span>${multiplicand}</span>
+            <span class="text-slate-400 font-light text-2xl sm:text-3xl">×</span>
+            <span>${mult}</span>
+            <div class="grid-ans-wrap ${showAns ? 'flex' : 'hidden'} items-center gap-2">
+              <span class="text-slate-400 font-light text-2xl sm:text-3xl">=</span>
+              <span class="text-emerald-700 bg-white/90 px-3 py-0.5 rounded-2xl shadow-inner font-black">${ans}</span>
+            </div>
+          </div>
+          <div class="grid-chant-text text-center text-xs font-bold tracking-wide opacity-75 ${chantDisplayClass}">
+            ${getTraditionalChant(multiplicand, mult)}
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+    }
+
+    // 九宮格讀音顯示開關
+    function setGridChantMode(show) {
+      state.showGridChant = show;
+      const showBtn = document.getElementById('gridChantShowBtn');
+      const hideBtn = document.getElementById('gridChantHideBtn');
+      if (show) {
+        showBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white text-brand-600 shadow-sm';
+        hideBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        hideBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white text-brand-600 shadow-sm';
+        showBtn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900';
+      }
+      if (state.layoutMode === 'grid') {
+        updatePracticeDisplay();
+      }
+    }
+
+    // 單式導覽步進 (next / prev)
+    function navigateStep(direction, shouldSpeak = true) {
+      state.stepIndex += direction;
+      if (state.stepIndex > 8) {
+        // 跳下一組
+        state.stepIndex = 0;
+        state.currentGroupIndex = (state.currentGroupIndex + 1) % state.multiplicandSeq.length;
+        if (state.inGroupOrder === 'random') regenerateMultiplierSeq();
+      } else if (state.stepIndex < 0) {
+        // 跳上一組最後一式
+        state.stepIndex = 8;
+        state.currentGroupIndex = (state.currentGroupIndex - 1 + state.multiplicandSeq.length) % state.multiplicandSeq.length;
+        if (state.inGroupOrder === 'random') regenerateMultiplierSeq();
+      }
+      updatePracticeDisplay();
+      if (shouldSpeak && state.layoutMode === 'single') {
+        speakCurrentEquation();
+      }
+    }
+
+    // 九宮格組別切換
+    function navigateGroup(direction, shouldSpeak = true) {
+      state.currentGroupIndex = (state.currentGroupIndex + direction + state.multiplicandSeq.length) % state.multiplicandSeq.length;
+      state.stepIndex = 0;
+      if (state.inGroupOrder === 'random') regenerateMultiplierSeq();
+      updatePracticeDisplay();
+      if (shouldSpeak) {
+        const currentMultiplicand = state.multiplicandSeq[state.currentGroupIndex];
+        speakText(`${currentMultiplicand}的乘法`);
+      }
+    }
+
+    // 點擊卡片顯示/隱藏答案
+    function toggleCardAnswerReveal() {
+      const ansContainer = document.getElementById('eqAnsContainer');
+      const isCurrentlyHidden = ansContainer.classList.contains('hidden');
+      if (isCurrentlyHidden) {
+        ansContainer.classList.remove('hidden');
+        ansContainer.classList.add('flex');
+        speakCurrentEquation();
+      } else {
+        ansContainer.classList.add('hidden');
+        ansContainer.classList.remove('flex');
+      }
+    }
+
+    /* ==========================================================================
+       自動播放 (Auto Browse - 純視覺自動切換，不強制語音帶念)
+       ========================================================================== */
+    function toggleAutoBrowse() {
+      if (state.isAutoBrowsing) {
+        stopAutoBrowse();
+      } else {
+        stopPacingLoop(); // 若正帶念中則互斥關閉
+        startAutoBrowse();
+      }
+    }
+
+    function startAutoBrowse() {
+      state.isAutoBrowsing = true;
+      const btn = document.getElementById('autoBrowseToggleBtn');
+      const icon = document.getElementById('autoBrowseIcon');
+      const text = document.getElementById('autoBrowseText');
+      btn.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-rose-600 hover:bg-rose-700 text-white shadow-sm transition';
+      icon.textContent = '⏸';
+      text.textContent = '暫停播放';
+
+      stopAutoBrowseTimer();
+      state.autoBrowseTimerId = setInterval(() => {
+        if (state.layoutMode === 'single') {
+          navigateStep(1, false); // 不觸發語音
+        } else {
+          navigateGroup(1, false); // 不觸發語音
+        }
+      }, state.practiceIntervalMs);
+    }
+
+    function stopAutoBrowse() {
+      state.isAutoBrowsing = false;
+      const btn = document.getElementById('autoBrowseToggleBtn');
+      const icon = document.getElementById('autoBrowseIcon');
+      const text = document.getElementById('autoBrowseText');
+      btn.className = 'flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-extrabold bg-slate-700 hover:bg-slate-800 text-white shadow-sm transition';
+      icon.textContent = '▶';
+      text.textContent = '自動播放';
+      stopAutoBrowseTimer();
+    }
+
+    function stopAutoBrowseTimer() {
+      if (state.autoBrowseTimerId) {
+        clearInterval(state.autoBrowseTimerId);
+        state.autoBrowseTimerId = null;
+      }
+    }
+
+    /* ==========================================================================
+       自動帶念節奏器 (Auto Pacing Engine - 伴隨語音念誦)
+       ========================================================================== */
+    function toggleAutoPacing() {
+      if (state.isAutoPacing) {
+        stopPacingLoop();
+      } else {
+        stopAutoBrowse(); // 若正在純播放則互斥關閉
+        startPacingLoop();
+      }
+    }
+
+    function startPacingLoop() {
+      state.isAutoPacing = true;
+      const btn = document.getElementById('autoPlayToggleBtn');
+      const icon = document.getElementById('autoPlayIcon');
+      const text = document.getElementById('autoPlayText');
+      btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+      btn.classList.add('bg-rose-600', 'hover:bg-rose-700');
+      icon.textContent = '⏸';
+      text.textContent = '暫停帶念';
+
+      stopPacingTimer();
+      if (state.layoutMode === 'single') {
+        speakCurrentEquation();
+      }
+      state.pacingTimerId = setInterval(() => {
+        if (state.layoutMode === 'single') {
+          navigateStep(1, true); // 伴隨語音
+        } else {
+          navigateGroup(1, true); // 伴隨語音
+        }
+      }, state.practiceIntervalMs);
+    }
+
+    function stopPacingLoop() {
+      state.isAutoPacing = false;
+      const btn = document.getElementById('autoPlayToggleBtn');
+      const icon = document.getElementById('autoPlayIcon');
+      const text = document.getElementById('autoPlayText');
+      btn.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+      btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+      icon.textContent = '▶';
+      text.textContent = '自動帶念';
+      stopPacingTimer();
+    }
+
+    function stopPacingTimer() {
+      if (state.pacingTimerId) {
+        clearInterval(state.pacingTimerId);
+        state.pacingTimerId = null;
+      }
+    }
+
+    // 秒數設定 (圖4輸入框)
+    function updatePracticeInterval(val) {
+      let sec = parseFloat(val);
+      if (isNaN(sec) || sec < 0.5) sec = 0.5;
+      if (sec > 10) sec = 10;
+      state.practiceIntervalMs = sec * 1000;
+      document.getElementById('practiceSecInput').value = sec.toFixed(1);
+
+      if (state.isAutoBrowsing) {
+        startAutoBrowse(); // 以新秒數重置計時器
+      }
+      if (state.isAutoPacing) {
+        startPacingLoop(); // 以新秒數重置計時器
+      }
+    }
+
+    /* ==========================================================================
+       設定切換事件處理
+       ========================================================================== */
+    function setAnswerMode(mode) {
+      state.answerMode = mode;
+      const hideBtn = document.getElementById('ansHideBtn');
+      const showBtn = document.getElementById('ansShowBtn');
+      if (mode === 'hide') {
+        hideBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all bg-white text-brand-600 shadow-sm';
+        showBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all text-slate-600 hover:text-slate-900';
+      } else {
+        showBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all bg-white text-brand-600 shadow-sm';
+        hideBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all text-slate-600 hover:text-slate-900';
+      }
+      updatePracticeDisplay();
+    }
+
+    function setLayoutMode(mode) {
+      state.layoutMode = mode;
+      const singleBtn = document.getElementById('layoutSingleBtn');
+      const gridBtn = document.getElementById('layoutGridBtn');
+      if (mode === 'single') {
+        singleBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all bg-brand-600 text-white shadow-sm flex items-center gap-1.5';
+        gridBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5';
+      } else {
+        gridBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all bg-brand-600 text-white shadow-sm flex items-center gap-1.5';
+        singleBtn.className = 'px-3.5 py-1.5 rounded-xl text-sm font-bold transition-all text-slate-600 hover:text-slate-900 flex items-center gap-1.5';
+      }
+      updatePracticeDisplay();
+    }
+
+    function setInGroupOrder(order) {
+      state.inGroupOrder = order;
+      const ascBtn = document.getElementById('inOrderAscBtn');
+      const descBtn = document.getElementById('inOrderDescBtn');
+      const randBtn = document.getElementById('inOrderRandBtn');
+
+      [ascBtn, descBtn, randBtn].forEach(b => {
+        if (b) b.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900';
+      });
+
+      if (order === 'asc') {
+        ascBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-sm';
+      } else if (order === 'desc') {
+        descBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-sm';
+      } else if (order === 'random') {
+        randBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-brand-600 shadow-sm';
+      }
+      regenerateMultiplierSeq();
+      updatePracticeDisplay();
+    }
+
+    function setOverallOrder(order) {
+      state.overallOrder = order;
+      const ascBtn = document.getElementById('overallAscBtn');
+      const descBtn = document.getElementById('overallDescBtn');
+      const randBtn = document.getElementById('overallRandBtn');
+      const randBadge = document.getElementById('randSeedBadge');
+
+      [ascBtn, descBtn, randBtn].forEach(b => b.className = 'px-3 py-1 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900');
+      randBadge.classList.add('hidden');
+
+      if (order === 'asc') {
+        ascBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-sm';
+      } else if (order === 'desc') {
+        descBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-slate-800 shadow-sm';
+      } else if (order === 'random') {
+        randBtn.className = 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-brand-600 shadow-sm flex items-center gap-1';
+        randBadge.classList.remove('hidden');
+      }
+
+      regenerateOverallSeq();
+    }
+
+    /* ==========================================================================
+       挑戰模式邏輯 (Challenge Mode Engine)
+       ========================================================================== */
+    function setChallengeTotal(count) {
+      state.challengeTotal = count;
+      document.getElementById('customCountInput').value = count;
+      updateChallengeCountBtns();
+    }
+
+    function setChallengeCustom(val) {
+      let num = parseInt(val, 10);
+      if (isNaN(num) || num < 1) num = 1;
+      if (num > 72) num = 72;
+      state.challengeTotal = num;
+      document.getElementById('customCountInput').value = num;
+      updateChallengeCountBtns();
+    }
+
+    function updateChallengeCountBtns() {
+      const btns = document.querySelectorAll('.chal-count-btn');
+      btns.forEach(btn => {
+        const c = parseInt(btn.textContent, 10);
+        if (c === state.challengeTotal) {
+          btn.className = 'chal-count-btn px-3 py-1 text-xs font-extrabold rounded-lg bg-white text-brand-600 shadow-sm';
+        } else {
+          btn.className = 'chal-count-btn px-3 py-1 text-xs font-extrabold rounded-lg text-slate-600 hover:text-slate-900';
+        }
+      });
+    }
+
+    // 開啟全螢幕挑戰視窗
+    function startChallengeModal() {
+      // 確保先關閉所有進行中的計時與動畫，避免透明遮罩阻擋點擊
+      stopChallengeAutoTimer();
+      stopConfetti();
+
+      // 讀取設定的秒數 (預設 1 秒)
+      const secVal = parseFloat(document.getElementById('chalAutoSecInput').value);
+      state.challengeAutoSec = isNaN(secVal) || secVal < 0.5 ? 1.0 : secVal;
+      document.getElementById('chalAutoCurrentSecText').textContent = state.challengeAutoSec.toFixed(1);
+
+      // 洗牌建立題庫
+      const fullPool = [];
+      for (let a = 2; a <= 9; a++) {
+        for (let b = 1; b <= 9; b++) {
+          fullPool.push({ a, b, ans: a * b });
+        }
+      }
+
+      for (let i = fullPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [fullPool[i], fullPool[j]] = [fullPool[j], fullPool[i]];
+      }
+
+      state.challengeDeck = fullPool.slice(0, state.challengeTotal);
+      state.challengeIndex = 0;
+      state.challengeShowAns = false;
+      state.challengeIsPaused = false;
+      state.isChallengeModalOpen = true;
+
+      // 更新暫停按鈕外觀
+      updatePauseButtonUI();
+
+      // 重置挑戰視窗與結束畫面的顯示狀態
+      const qCard = document.getElementById('challengeQuestionCard');
+      const compArea = document.getElementById('challengeCompleteArea');
+      const modal = document.getElementById('challengeModal');
+
+      if (qCard) {
+        qCard.style.display = 'flex';
+        qCard.classList.remove('hidden');
+      }
+      if (compArea) {
+        compArea.style.display = 'none';
+        compArea.classList.add('hidden');
+      }
+
+      // 明確使用 style 與 class 控制，確保開啟時正常顯示且接收點擊
+      modal.style.display = 'flex';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      renderCurrentChallengeQuestion();
+      startChallengeAutoTimer();
+    }
+
+    // 關閉全螢幕挑戰視窗 (取消挑戰)
+    function closeChallengeModal() {
+      stopChallengeAutoTimer();
+      stopConfetti();
+      state.isChallengeModalOpen = false;
+      state.challengeIsPaused = false;
+
+      // 徹底隱藏全螢幕 Modal 與完成區，確保恢復初始可用狀態
+      const modal = document.getElementById('challengeModal');
+      modal.style.display = 'none';
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+
+      const compArea = document.getElementById('challengeCompleteArea');
+      if (compArea) {
+        compArea.style.display = 'none';
+        compArea.classList.add('hidden');
+      }
+
+      const qCard = document.getElementById('challengeQuestionCard');
+      if (qCard) {
+        qCard.style.display = 'flex';
+        qCard.classList.remove('hidden');
+      }
+
+      window.speechSynthesis.cancel();
+    }
+
+    // 自動播放計時器控制
+    function startChallengeAutoTimer() {
+      stopChallengeAutoTimer();
+      if (state.challengeIsPaused) return;
+
+      const ms = state.challengeAutoSec * 1000;
+      state.challengeAutoTimerId = setTimeout(() => {
+        // 時間到若尚未顯示答案，可自動進入下一題
+        nextChallengeQuestion();
+      }, ms);
+    }
+
+    function stopChallengeAutoTimer() {
+      if (state.challengeAutoTimerId) {
+        clearTimeout(state.challengeAutoTimerId);
+        state.challengeAutoTimerId = null;
+      }
+    }
+
+    // 暫停 / 繼續挑戰
+    function toggleChallengePause() {
+      state.challengeIsPaused = !state.challengeIsPaused;
+      updatePauseButtonUI();
+      if (state.challengeIsPaused) {
+        stopChallengeAutoTimer();
+      } else {
+        startChallengeAutoTimer();
+      }
+    }
+
+    function updatePauseButtonUI() {
+      const pText = document.getElementById('chalPauseText');
+      const pIcon = document.getElementById('chalPauseIcon');
+      const tag = document.getElementById('chalAutoStatusTag');
+
+      if (state.challengeIsPaused) {
+        pText.textContent = '繼續';
+        pIcon.textContent = '▶️';
+        tag.className = 'text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1 rounded-full flex items-center gap-1.5';
+        tag.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span>已暫停';
+      } else {
+        pText.textContent = '暫停';
+        pIcon.textContent = '⏸️';
+        tag.className = 'text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-1.5';
+        tag.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>自動播放中 (${state.challengeAutoSec.toFixed(1)}s)`;
+      }
+    }
+
+    function renderCurrentChallengeQuestion() {
+      if (state.challengeIndex >= state.challengeDeck.length) {
+        finishChallenge();
+        return;
+      }
+
+      const cur = state.challengeDeck[state.challengeIndex];
+      document.getElementById('chalCurIndex').textContent = state.challengeIndex + 1;
+      document.getElementById('chalTotalIndex').textContent = state.challengeDeck.length;
+
+      // 更新進度條
+      const pct = ((state.challengeIndex + 1) / state.challengeDeck.length) * 100;
+      document.getElementById('challengeProgressBar').style.width = `${pct}%`;
+
+      document.getElementById('chalA').textContent = cur.a;
+      document.getElementById('chalB').textContent = cur.b;
+      document.getElementById('chalAns').textContent = cur.ans;
+
+      const ansWrap = document.getElementById('chalAnsWrap');
+      const btnText = document.getElementById('chalRevealBtnText');
+      
+      // 未顯示答案時完全隱藏 (= 答案) 區塊，保證題目置中
+      if (state.challengeShowAns) {
+        ansWrap.classList.remove('hidden');
+        ansWrap.classList.add('flex');
+        btnText.textContent = '🙈 隱藏答案 (空白鍵)';
+      } else {
+        ansWrap.classList.add('hidden');
+        ansWrap.classList.remove('flex');
+        btnText.textContent = '👁️ 顯示答案 (空白鍵)';
+      }
+
+      // 自動朗讀出題
+      if (state.speechEnabled) {
+        speakText(`${cur.a} 乘 ${cur.b}`);
+      }
+    }
+
+    function toggleChallengeAnswer() {
+      state.challengeShowAns = !state.challengeShowAns;
+      const cur = state.challengeDeck[state.challengeIndex];
+      if (state.challengeShowAns) {
+        if (state.voiceStyle === 'traditional') {
+          speakText(getTraditionalChant(cur.a, cur.b));
+        } else {
+          speakText(`${cur.a} 乘 ${cur.b} 等於 ${cur.ans}`);
+        }
+      }
+      renderCurrentChallengeQuestion();
+    }
+
+    function nextChallengeQuestion() {
+      state.challengeIndex++;
+      state.challengeShowAns = false;
+      renderCurrentChallengeQuestion();
+      if (state.challengeIndex < state.challengeDeck.length && !state.challengeIsPaused) {
+        startChallengeAutoTimer();
+      }
+    }
+
+    function finishChallenge() {
+      stopChallengeAutoTimer();
+      
+      const qCard = document.getElementById('challengeQuestionCard');
+      const compArea = document.getElementById('challengeCompleteArea');
+      if (qCard) {
+        qCard.style.display = 'none';
+        qCard.classList.add('hidden');
+      }
+      if (compArea) {
+        compArea.style.display = 'flex';
+        compArea.classList.remove('hidden');
+      }
+
+      const total = state.challengeDeck.length;
+      document.getElementById('summaryTotalCount').textContent = total;
+
+      speakText(`恭喜完成！已完成全數 ${total} 題挑戰！`);
+      launchConfetti();
+    }
+
+    /* ==========================================================================
+       全螢幕與導航切換
+       ========================================================================== */
+    function switchMainMode(mode) {
+      state.mainMode = mode;
+      const pBtn = document.getElementById('navPracticeBtn');
+      const cBtn = document.getElementById('navChallengeBtn');
+      const pView = document.getElementById('practiceView');
+      const cView = document.getElementById('challengeView');
+
+      if (mode === 'practice') {
+        pBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-bold transition-all shadow-sm bg-white text-brand-600';
+        cBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-bold transition-all text-slate-600 hover:text-slate-900';
+        pView.classList.remove('hidden');
+        cView.classList.add('hidden');
+        stopPacingLoop();
+        stopAutoBrowse();
+        updatePracticeDisplay();
+      } else {
+        cBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-bold transition-all shadow-sm bg-white text-brand-600';
+        pBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm sm:text-base font-bold transition-all text-slate-600 hover:text-slate-900';
+        cView.classList.remove('hidden');
+        pView.classList.add('hidden');
+        stopPacingLoop();
+        stopAutoBrowse();
+      }
+    }
+
+    function isCurrentlyFullscreen() {
+      return !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement ||
+        document.body.classList.contains('pseudo-fullscreen')
+      );
+    }
+
+    function updateFullscreenIcons(isFullscreen) {
+      const expandIcon = document.getElementById('fullscreenIconExpand');
+      const compressIcon = document.getElementById('fullscreenIconCompress');
+      const btn = document.getElementById('fullscreenToggleBtn');
+      if (expandIcon && compressIcon) {
+        if (isFullscreen) {
+          expandIcon.classList.add('hidden');
+          compressIcon.classList.remove('hidden');
+          btn.classList.add('bg-brand-50', 'text-brand-600', 'border-brand-200');
+          btn.title = '結束全螢幕';
+        } else {
+          expandIcon.classList.remove('hidden');
+          compressIcon.classList.add('hidden');
+          btn.classList.remove('bg-brand-50', 'text-brand-600', 'border-brand-200');
+          btn.title = '全螢幕顯示 (課堂推薦)';
+        }
+      }
+    }
+
+    function toggleFullscreen() {
+      const docEl = document.documentElement;
+      const isFs = isCurrentlyFullscreen();
+
+      if (!isFs) {
+        // 嘗試原生 Fullscreen API (含 Safari / 舊版 Chromium 前綴)
+        const requestMethod =
+          docEl.requestFullscreen ||
+          docEl.webkitRequestFullscreen ||
+          docEl.mozRequestFullScreen ||
+          docEl.msRequestFullscreen;
+
+        if (requestMethod) {
+          try {
+            const promise = requestMethod.call(docEl);
+            if (promise && promise.catch) {
+              promise.catch(() => {
+                // 原生全螢幕被 iframe 或安全性政策阻擋時，啟動備援全螢幕模式
+                enablePseudoFullscreen();
+              });
+            }
+          } catch (e) {
+            enablePseudoFullscreen();
+          }
+        } else {
+          enablePseudoFullscreen();
+        }
+      } else {
+        // 離開全螢幕
+        const exitMethod =
+          document.exitFullscreen ||
+          document.webkitExitFullscreen ||
+          document.mozCancelFullScreen ||
+          document.msExitFullscreen;
+
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement) {
+          if (exitMethod) {
+            try {
+              exitMethod.call(document);
+            } catch (e) {
+              disablePseudoFullscreen();
+            }
+          }
+        } else {
+          disablePseudoFullscreen();
+        }
+      }
+    }
+
+    function enablePseudoFullscreen() {
+      document.body.classList.add('pseudo-fullscreen');
+      updateFullscreenIcons(true);
+    }
+
+    function disablePseudoFullscreen() {
+      document.body.classList.remove('pseudo-fullscreen');
+      updateFullscreenIcons(false);
+    }
+
+    // 監聽原生全螢幕狀態變更，同步按鈕圖示
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(event => {
+      document.addEventListener(event, () => {
+        updateFullscreenIcons(isCurrentlyFullscreen());
+      });
+    });
+
+    /* ==========================================================================
+       鍵盤快捷鍵支援
+       ========================================================================== */
+    window.addEventListener('keydown', (e) => {
+      // 避免與輸入框互動衝突
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (state.isChallengeModalOpen) {
+          toggleChallengeAnswer();
+        } else if (state.mainMode === 'practice') {
+          if (state.layoutMode === 'single') {
+            toggleCardAnswerReveal();
+          }
+        }
+      } else if (e.code === 'ArrowRight' || e.code === 'ArrowDown') {
+        e.preventDefault();
+        if (state.isChallengeModalOpen) {
+          nextChallengeQuestion();
+        } else if (state.mainMode === 'practice') {
+          if (state.layoutMode === 'single') navigateStep(1);
+          else navigateGroup(1);
+        }
+      } else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        if (state.mainMode === 'practice') {
+          if (state.layoutMode === 'single') navigateStep(-1);
+          else navigateGroup(-1);
+        }
+      } else if (e.code === 'Escape') {
+        if (state.isChallengeModalOpen) {
+          closeChallengeModal();
+        }
+      }
+    });
+
+    /* ==========================================================================
+       節慶綵帶彩屑粒子動畫
+       ========================================================================== */
+    let confettiAnimationId = null;
+
+    function stopConfetti() {
+      if (confettiAnimationId) {
+        cancelAnimationFrame(confettiAnimationId);
+        confettiAnimationId = null;
+      }
+      const canvas = document.getElementById('confettiCanvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.style.display = 'none';
+        canvas.classList.add('hidden');
+      }
+    }
+
+    function launchConfetti() {
+      stopConfetti(); // 避免重複疊加
+      const canvas = document.getElementById('confettiCanvas');
+      if (!canvas) return;
+      canvas.style.display = 'block';
+      canvas.classList.remove('hidden');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const ctx = canvas.getContext('2d');
+      const particles = [];
+      const colors = ['#2563EB', '#F59E0B', '#10B981', '#EC4899', '#8B5CF6', '#3B82F6'];
+
+      for (let i = 0; i < 90; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * -canvas.height,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: Math.random() * 4 - 2,
+          vy: Math.random() * 3 + 3,
+          rot: Math.random() * 360,
+          vrot: Math.random() * 6 - 3,
+        });
+      }
+
+      const start = Date.now();
+
+      function update() {
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+
+        particles.forEach((p) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vrot;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+
+          if (p.y > height) {
+            p.y = -20;
+            p.x = Math.random() * width;
+          }
+        });
+
+        if (Date.now() - start < 4500) {
+          confettiAnimationId = requestAnimationFrame(update);
+        } else {
+          stopConfetti();
+        }
+      }
+
+      update();
+    }
+
+    // 視窗自適應縮放
+    window.addEventListener('resize', () => {
+      const canvas = document.getElementById('confettiCanvas');
+      if (!canvas.classList.contains('hidden')) {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+    });
+
+    /* ==========================================================================
+       初始化頁面
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      regenerateOverallSeq();
+      updatePracticeDisplay();
+    });
+  </script>
+</body>
+</html>
